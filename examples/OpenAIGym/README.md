@@ -1,13 +1,54 @@
-### A3C code and models for my Gym submissions on Atari games
+# Git Configuration
+Initialization
+~~~
+git clone https://github.com/pkumusic/tensorpack.git
+git remote add upstream https://github.com/ppwwyyxx/tensorpack.git
+~~~
+Update
+~~~
+git fetch upstream
+git checkout master
+git merge upgstream/master
+~~~
 
-### To train on an Atari game:
+# Deploy on Tian's Linux Machine
+1. `export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda/lib64`
+2. 
+~~~~
+export PYTHONPATH=$PYTHONPATH:`readlink -f path/to/tensorpack`
+export PYTHONPATH=$PYTHONPATH:`readlink -f /usr0/home/ttian1/ml/tensorpack`
+~~~~
+
+3. Install the requirements in tensorpack
+
+# TODO List for the Deep Learning Project (Yuezhang, Tian, Jing)
+1. Choose the game we wanna use. (Having different objects) (Ranked by preference for experiments)
+    * MsPacman-v0: Pacman eat beans, pellets, and may eat monsters. 
+    * Riverraid-v0: Has fuel and ship objects which have opposite effects.
+    * Berzerk-v0: Walls, bullets and enemies to avoid, enemies to kill.
+    * Pooyan-v0: The game I love when I was a child. Some objects inside. 
+    * (Hard) MontezumaRevenge-v0: A very hard game for DRL where we need to get keys and its a long adventure game. (So the reward is delayed and sparse)
+    * (Hard) Kangaroo-v0: A3C seems performs bad. Has several objects.
+    * (Hard) Skiing-v0: The skier needs to across the areas inside the two flags to get scores.
+
+2. Train the A3C model for the game and evaluate it on gym.
+
+`./train-atari.py --env MsPacman-v0 --gpu 0`
+
+3. Visualize and evaluate the hidden features of the network to see if it encodes any object/edge info.
+
+4. Apply pre-trained edge/object detection techniques, combining it to A3C model.
+
+5. Can we incorporate the object/edge detection objective to the DRL model?
+
+# To train an Atari game in gym:
 
 `./train-atari.py --env Breakout-v0 --gpu 0`
 
-### To run a pretrained Atari model for 100 episodes:
+# To run a pretrained Atari model for 100 episodes:
 
 1. Download models from [model zoo](https://drive.google.com/open?id=0B9IPQTvr2BBkS0VhX0xmS1c5aFk)
-2. `ENV=Breakout-v0; ./run-atari.py --load "$ENV".tfmodel --env "$ENV" --episode 100 --output output_dir`
+2. `ENV=NAME_OF_ENV ./run-atari.py --load "$ENV".tfmodel --env "$ENV"`
 
 Models are available for the following gym atari environments (click links for videos):
 
