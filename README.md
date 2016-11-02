@@ -1,3 +1,61 @@
+# TODO List for the Deep Learning Project (Yuezhang, Tian, Jing) (Done)
++ Choose the game we wanna use. (Having different objects) (Ranked by preference for experiments)
+    * Freeway-v0: A chicken is trying to across the street while avoid hitting by cars 
+    * MsPacman-v0: Pacman eat beans, pellets, and may eat monsters. 
+    * Riverraid-v0: Has fuel and ship objects which have opposite effects.
+    * Berzerk-v0: Walls, bullets and enemies to avoid, enemies to kill.
+    * Pooyan-v0: The game I love when I was a child. Some objects inside. 
+    * (Hard) MontezumaRevenge-v0: A very hard game for DRL where we need to get keys and its a long adventure game. (So the reward is delayed and sparse)
+    * (Hard) Kangaroo-v0: A3C seems performs bad. Has several objects.
+    * (Hard) Skiing-v0: The skier needs to across the areas inside the two flags to get scores.
++ Train the A3C model for the game and evaluate it on gym. (Done)
+`./train-atari.py --env MsPacman-v0 --gpu 0`
++ Rewrite the DQN to fit in the gym env
++ Visualize and evaluate the hidden features of the network to see if it encodes any object/edge info.
++ Apply pre-trained edge/object detection techniques, combining it to A3C model.
++ Can we incorporate the object/edge detection objective to the DRL model?
+
+
+# Git Configuration
+Initialization
+~~~
+git clone https://github.com/pkumusic/tensorpack.git
+git remote add upstream https://github.com/ppwwyyxx/tensorpack.git
+~~~
+If you need to synchronize the tensorpack with the newest one.
+~~~
+git fetch upstream
+git checkout master
+git merge upgstream/master
+~~~
+
+# Deploy on Mac
++ I did it without virtual environment. If using machines without root privilege, it maybe more convenient to use virtualenv 
++ Python 2 or 3
++ Install TensorFlow >= 0.10 
+```pip install tensorflow```
+Please do this before installing numpy. Since sometimes numpy would have version confliction with tensorflow version.
++ Python bindings for OpenCV
+``` pip install opencv-python```
++ other requirements: (Please refer to the txt file below)
+```
+pip install --user -r requirements.txt
+pip install --user -r opt-requirements.txt (some optional dependencies, you can install later if needed)
+```
++ Enable `import tensorpack`:
+```
+export PYTHONPATH=$PYTHONPATH:`readlink -f path/to/tensorpack`
+```
+
+# Additional on deploy on Tian's Linux Machine
+1. `export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda/lib64`
+2. 
+~~~~
+export PYTHONPATH=$PYTHONPATH:`readlink -f path/to/tensorpack`
+export PYTHONPATH=$PYTHONPATH:`readlink -f /usr0/home/ttian1/ml/tensorpack`
+~~~~
+
+
 # tensorpack
 Neural Network Toolbox on TensorFlow
 
