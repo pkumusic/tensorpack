@@ -1,5 +1,5 @@
-# TODO List for the Deep Learning Project (Yuezhang, Tian, Jing) (Done)
-+ Choose the game we wanna use. (Having different objects) (Ranked by preference for experiments)
+# TODO List for the Deep Learning Project (Yuezhang, Tian, Jing) 
++ Choose the game we wanna use. (Having different objects) (Ranked by preference for experiments) (Done)
     * Freeway-v0: A chicken is trying to across the street while avoid hitting by cars 
     * MsPacman-v0: Pacman eat beans, pellets, and may eat monsters. 
     * Riverraid-v0: Has fuel and ship objects which have opposite effects.
