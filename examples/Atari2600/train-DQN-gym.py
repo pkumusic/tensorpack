@@ -8,7 +8,10 @@ from tensorpack import *
 from tensorpack.models.model_desc import ModelDesc
 from tensorpack.train.config import TrainConfig
 from tensorpack.tfutils.common import *
-from tensorpack.callbacks.base import Callback
+from tensorpack.callbacks.group import Callbacks
+from tensorpack.callbacks.stat import StatPrinter
+from tensorpack.callbacks.common import ModelSaver
+from tensorpack.callbacks.param import ScheduledHyperParamSetter, HumanHyperParamSetter
 
 STEP_PER_EPOCH = 6000
 
@@ -22,7 +25,9 @@ def get_config():
     return TrainConfig(
         #dataset = ?, # A dataflow object for training
         optimizer=tf.train.AdamOptimizer(lr, epsilon=1e-3),
-        callbacks=Callback(),
+        callbacks=Callbacks([StatPrinter(), ModelSaver(),
+
+                             ]),
 
         session_config = get_default_sess_config(0.6),  # Tensorflow default session config consume too much resources.
         model = M,
