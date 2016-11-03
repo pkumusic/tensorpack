@@ -15,19 +15,29 @@ from tensorpack.callbacks.param import ScheduledHyperParamSetter, HumanHyperPara
 
 STEP_PER_EPOCH = 6000
 
+IMAGE_SIZE = (84, 84)
+FRAME_HISTORY = 4
+
+
+
 class Model(ModelDesc):
-    pass
+    def _get_input_vars(self):
+
+
+
+
 def get_config():
     logger.auto_set_dir()
-
     M = Model()
     lr = tf.Variable(0.001, trainable=False, name='learning_rate')
     return TrainConfig(
         #dataset = ?, # A dataflow object for training
         optimizer=tf.train.AdamOptimizer(lr, epsilon=1e-3),
         callbacks=Callbacks([StatPrinter(), ModelSaver(),
+            ScheduledHyperParamSetter('learning_rate',[(80, 0.0003), (120, 0.0001)]) # No interpolation
+            # TODO: Some other parameters
 
-                             ]),
+            ]),
 
         session_config = get_default_sess_config(0.6),  # Tensorflow default session config consume too much resources.
         model = M,
