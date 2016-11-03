@@ -12,6 +12,9 @@ from tensorpack.callbacks.group import Callbacks
 from tensorpack.callbacks.stat import StatPrinter
 from tensorpack.callbacks.common import ModelSaver
 from tensorpack.callbacks.param import ScheduledHyperParamSetter, HumanHyperParamSetter
+from tensorpack.tfutils.summary import add_moving_summary, add_param_summary
+from tensorpack.tfutils.symbolic_functions import huber_loss
+from tensorpack.RL.expreplay import ExpReplay
 
 STEP_PER_EPOCH = 6000
 
@@ -22,6 +25,7 @@ IMAGE_SHAPE3 = IMAGE_SIZE + (FRAME_HISTORY, ) # one state input
 
 NUM_ACTIONS = 4 #TODO: Generate it automatically later.
 
+GAMMA = 0.99
 
 class Model(ModelDesc):
     def _get_input_vars(self):
@@ -42,20 +46,39 @@ class Model(ModelDesc):
         action_onehot = tf.one_hot(action, NUM_ACTIONS, 1.0, 0.0) # N * NUM_ACTION
         pred_action_value = tf.reduce_sum(predict_value * action_onehot, 1) # N,
 
+        ### This is for tracking the learning process.
+        # The mean max-Q across samples. Should be increasing over training
+        max_pred_reward = tf.reduce_mean(tf.reduce_max(predict_value, 1),
+                             name='predict_reward')
+        add_moving_summary(max_pred_reward)
 
+        with tf.variable_scope('target'): #TODO: Check the usage of variable scope in this context
+            targetQ_predict_value = self._get_DQN_prediction(next_state)
 
-        pass
+        # DQN
+        best_v = tf.reduce_max(targetQ_predict_value, 1)
 
+        #TODO: Double-DQN
 
+        #TODO: Why we need stop_gradient here
+        target = reward + (1.0 - tf.cast(isOver, tf.float32)) * GAMMA * tf.stop_gradient(best_v)
 
+        cost = huber_loss(target - pred_action_value)
 
+        add_param_summary([]) #TODO
+
+        self.cost = tf.reduce_mean(cost, name='cost')
 
 def get_config():
     logger.auto_set_dir()
     M = Model()
     lr = tf.Variable(0.001, trainable=False, name='learning_rate')
+    tf.scalar_summary('learning_rate', lr)
+
+    dataset_train = ExpReplay()
+
     return TrainConfig(
-        #dataset = ?, # A dataflow object for training
+        dataset=dataset_train, # A dataflow object for training
         optimizer=tf.train.AdamOptimizer(lr, epsilon=1e-3),
         callbacks=Callbacks([StatPrinter(), ModelSaver(),
             ScheduledHyperParamSetter('learning_rate',[(80, 0.0003), (120, 0.0001)]) # No interpolation
