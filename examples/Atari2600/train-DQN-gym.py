@@ -15,6 +15,8 @@ from tensorpack.callbacks.param import ScheduledHyperParamSetter, HumanHyperPara
 from tensorpack.tfutils.summary import add_moving_summary, add_param_summary
 from tensorpack.tfutils.symbolic_functions import huber_loss
 from tensorpack.RL.expreplay import ExpReplay
+from tensorpack.tfutils.sessinit import SaverRestore
+from tensorpack.train.trainer import QueueInputTrainer
 
 STEP_PER_EPOCH = 6000
 
@@ -111,6 +113,8 @@ if __name__ == "__main__":
 
     if args.task == 'train':
         config = get_config()
-
+        if args.load:
+            config.session_init = SaverRestore(args.load)
+        QueueInputTrainer(config).train()
     else:
         pass

@@ -17,16 +17,17 @@ FRAME_HISTORY = 4
 
 def get_player(viz=False, train=False, dumpdir=None):
     pl = GymEnv(ENV_NAME, dumpdir=dumpdir)
-    # def func(img):
-    #     return cv2.resize(img, IMAGE_SIZE[::-1])
-    # pl = MapPlayerState(pl, func)
-    #
-    # global NUM_ACTIONS
-    # NUM_ACTIONS = pl.get_action_space().num_actions()
-    # if not train:
-    #     pl = HistoryFramePlayer(pl, FRAME_HISTORY)
-    #     pl = PreventStuckPlayer(pl, 30, 1)
-    # pl = LimitLengthPlayer(pl, 40000)
+    def func(img):
+        return cv2.resize(img, IMAGE_SIZE[::-1])
+    pl = MapPlayerState(pl, func)
+
+    global NUM_ACTIONS
+    NUM_ACTIONS = pl.get_action_space().num_actions()
+    if not train:
+        pass
+        #pl = HistoryFramePlayer(pl, FRAME_HISTORY)
+        #pl = PreventStuckPlayer(pl, 30, 1) #TODO: I think we don't need this in freeway. Is any bug in this code? didn't see repeated actions.
+    pl = LimitLengthPlayer(pl, 40000)
     return pl
 
 
@@ -38,8 +39,10 @@ if __name__ == '__main__':
     player.action(2)
     #player.restart_episode()
     # Original image: (210 * 160 * 3) by print player.current_state().shape
-    print np.sum(player.current_state())
-
+    print player.current_state().shape
+    import matplotlib.pyplot as plt
+    imgplot = plt.imshow(player.current_state())
+    plt.show()
 
 
 
