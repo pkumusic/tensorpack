@@ -17,7 +17,16 @@ from tensorpack.tfutils.symbolic_functions import huber_loss
 from tensorpack.RL.expreplay import ExpReplay
 from tensorpack.tfutils.sessinit import SaverRestore
 from tensorpack.train.trainer import QueueInputTrainer
-
+from tensorpack.RL.common import MapPlayerState
+from tensorpack.RL.gymenv import GymEnv
+from tensorpack.RL.common import LimitLengthPlayer, PreventStuckPlayer
+from tensorpack.RL.history import HistoryFramePlayer
+import common
+from tensorpack.tfutils.argscope import argscope
+from tensorpack.models.conv2d import Conv2D
+from tensorpack.models.pool import MaxPooling
+from tensorpack.models.fc import FullyConnected
+from tensorpack.models.nonlin import LeakyReLU
 STEP_PER_EPOCH = 6000
 
 IMAGE_SIZE = (84, 84)
@@ -25,22 +34,54 @@ FRAME_HISTORY = 4
 IMAGE_SHAPE3 = IMAGE_SIZE + (FRAME_HISTORY, ) # one state input
 
 
-NUM_ACTIONS = 4 #TODO: Generate it automatically later.
+NUM_ACTIONS = None
 
 GAMMA = 0.99
 
+def get_player(viz=False, train=False, dumpdir=None):
+    pl = GymEnv(ENV_NAME, dumpdir=dumpdir)
+    def func(img):
+        return cv2.resize(img, IMAGE_SIZE[::-1]) #TODO: Do we really need to resize here? Check the original paper.
+    pl = MapPlayerState(pl, func)
+
+    global NUM_ACTIONS
+    NUM_ACTIONS = pl.get_action_space().num_actions()
+
+    if not train: # When testing
+        pl = HistoryFramePlayer(pl, FRAME_HISTORY)
+        #pl = PreventStuckPlayer(pl, 30, 1) #TODO: Need to know the start button. Is it different for each game?
+    pl = LimitLengthPlayer(pl, 30000) # 500s
+    return pl
+common.get_player = get_player()
+
 class Model(ModelDesc):
     def _get_input_vars(self):
-
+        if NUM_ACTIONS is None:
+            p = get_player(); del p
         return [InputVar(tf.float32, (None,) + IMAGE_SHAPE3, 'state'),
                 InputVar(tf.int64, (None,), 'action'),
                 InputVar(tf.float32, (None,), 'reward'),
                 InputVar(tf.float32, (None,) + IMAGE_SHAPE3, 'next_state'),
                 InputVar(tf.bool, (None,), 'isOver')]
-        pass
 
     def _get_DQN_prediction(self, image):
-        pass
+        #TODO: Do we need to add other pre-processing? e.g., subtract mean
+        image = image / 255.0
+        #TODO: The network structure can be improved?
+        with argscope(Conv2D, nl=tf.nn.relu, use_bias=True): # Activation for each layer
+            l = Conv2D('conv0', image, out_channel=32, kernel_shape=5)
+            l = MaxPooling('pool0', l, 2)
+            l = Conv2D('conv1', l, out_channel=32, kernel_shape=5)
+            l = MaxPooling('pool1', l, 2)
+            l = Conv2D('conv2', l, out_channel=64, kernel_shape=4)
+            l = MaxPooling('pool2', l, 2)
+            l = Conv2D('conv2', l, out_channel=64, kernel_shape=3)
+            # the original arch
+            # .Conv2D('conv0', image, out_channel=32, kernel_shape=8, stride=4)
+            # .Conv2D('conv1', out_channel=64, kernel_shape=4, stride=2)
+            # .Conv2D('conv2', out_channel=64, kernel_shape=3)
+            l = FullyConnected('fc0', l, 512, nl=lambda x, name:LeakyReLU.f(x, 0.01, name))
+            l = FullyConnected('fct', l, NUM_ACTIONS, nl=tf.identity())
 
     def _build_graph(self, inputs):
         state, action, reward, next_state, isOver = inputs
@@ -67,8 +108,8 @@ class Model(ModelDesc):
 
         cost = huber_loss(target - pred_action_value)
 
-        add_param_summary([]) #TODO
-
+        add_param_summary([('conv.*/W', ['histogram', 'rms']),
+                           ('fc.*/W', ['histogram', 'rms'])]) #TODO
         self.cost = tf.reduce_mean(cost, name='cost')
 
 def get_config():
