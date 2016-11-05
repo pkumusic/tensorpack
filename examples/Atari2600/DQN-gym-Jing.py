@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 # DL Project for 10807
 
+import gym
 import numpy as np
 import tensorflow as tf
 import os, sys, re, time
@@ -25,20 +26,43 @@ from tensorpack.callbacks.stat import StatPrinter
 from tensorpack.callbacks.common import ModelSaver
 from tensorpack.callbacks.param import ScheduledHyperParamSetter, HumanHyperParamSetter
 
+import argparse
+import os
+from tensorpack.predict.common import PredictConfig
+from tensorpack import *
+from tensorpack.models.model_desc import ModelDesc, InputVar
+from tensorpack.train.config import TrainConfig
+from tensorpack.tfutils.common import *
+from tensorpack.callbacks.group import Callbacks
+from tensorpack.callbacks.stat import StatPrinter
+from tensorpack.callbacks.common import ModelSaver
+from tensorpack.callbacks.param import ScheduledHyperParamSetter, HumanHyperParamSetter
+from tensorpack.tfutils.summary import add_moving_summary, add_param_summary
+from tensorpack.tfutils.symbolic_functions import huber_loss
+from tensorpack.RL.expreplay import ExpReplay
+from tensorpack.tfutils.sessinit import SaverRestore
+from tensorpack.train.trainer import QueueInputTrainer
+from tensorpack.RL.common import MapPlayerState
+from tensorpack.RL.gymenv import GymEnv
+from tensorpack.RL.common import LimitLengthPlayer, PreventStuckPlayer
+from tensorpack.RL.history import HistoryFramePlayer
+from tensorpack.tfutils.argscope import argscope
+from tensorpack.models.conv2d import Conv2D
+from tensorpack.models.pool import MaxPooling
+from tensorpack.models.fc import FullyConnected
+from tensorpack.models.nonlin import LeakyReLU
+
 import common
-from common import play_model, Evaluator, eval_model_multithread
+from common import play_model, Evaluator, eval_model_multithread, play_one_episode
 
 
-STEP_PER_EPOCH = 6000
+# STEP_PER_EPOCH = 6000
 
 
 BATCH_SIZE = 64
 IMAGE_SIZE = (84, 84)
 FRAME_HISTORY = 4
 ACTION_REPEAT = 4
-# HEIGHT_RANGE = (None, None)
-HEIGHT_RANGE = (36, 204)    # for breakout
-#HEIGHT_RANGE = (28, -8)   # for pong
 
 CHANNEL = FRAME_HISTORY * 3
 IMAGE_SHAPE3 = IMAGE_SIZE + (CHANNEL,)
@@ -50,7 +74,7 @@ END_EXPLORATION = 0.1
 
 MEMORY_SIZE = 1e6
 INIT_MEMORY_SIZE = 5e4
-STEP_PER_EPOCH = 10000
+STEP_PER_EPOCH = 100
 EVAL_EPISODE = 50
 
 NUM_ACTIONS = None
@@ -149,24 +173,6 @@ class Model(ModelDesc):
                 tf.clip_by_global_norm([grad], 5)[0][0]),
                 SummaryGradient()]
 
-# def get_config():
-#     logger.auto_set_dir()
-#     M = Model()
-#
-#     lr = tf.Variable(0.001, trainable=False, name='learning_rate')
-#     tf.scalar_summary('learning_rate', lr)
-#
-#     return TrainConfig(
-#         #dataset = ?, # A dataflow object for training
-#         optimizer=tf.train.AdamOptimizer(lr, epsilon=1e-3),
-#         callbacks=Callbacks([StatPrinter(), ModelSaver(),
-#
-#                              ]),
-#
-#         session_config = get_default_sess_config(0.6),  # Tensorflow default session config consume too much resources.
-#         model = M,
-#         step_per_epoch=STEP_PER_EPOCH,
-#     )
 
 def get_config():
     logger.auto_set_dir()
@@ -207,13 +213,30 @@ def get_config():
         step_per_epoch=STEP_PER_EPOCH,
     )
 
+
+def run_submission(cfg, output, nr):
+    player = get_player(dumpdir=output)
+    predfunc = get_predict_func(cfg)
+    for k in range(nr):
+        if k != 0:
+            player.restart_episode()
+        score = play_one_episode(player, predfunc)
+        print("Total:", score)
+
+def do_submit(output):
+    gym.upload(output, api_key='sk_gvh4qU0xTVuv5JmcdBfgTg')
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-g','--gpu', help='comma separated list of GPU(s) to use.')
     parser.add_argument('-l','--load', help='load model')
     parser.add_argument('-e','--env', help='env', required=True)
     parser.add_argument('-t','--task', help='task to perform',
-                        choices=['play','eval','train'], default='train')
+                        choices=['play','eval','run','train'], default='train')
+    parser.add_argument('-p','--episode', help='number of episodes to run',
+            type=int, default=5)
+    parser.add_argument('-o','--output', help='output directory', default='gym-submit')
     args=parser.parse_args()
     ENV_NAME = args.env
     assert ENV_NAME
@@ -234,8 +257,12 @@ if __name__ == "__main__":
             play_model(cfg)
         elif args.task == 'eval':
             eval_model_multithread(cfg, EVAL_EPISODE)
+        elif args.task == 'run':
+            # run_submission(cfg, args.output, args.episode)
+            do_submit(args.output)
     else:
         config = get_config()
         if args.load:
             config.session_init = SaverRestore(args.load)
         QueueInputTrainer(config).train()
+
