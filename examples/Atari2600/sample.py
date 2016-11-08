@@ -40,7 +40,7 @@ def RGB2YUV(X):
     V = 0.615 * X[:,:,0] - 0.51499 * X[:,:,1] - 0.10001 * X[:,:,2]
     return Y, U, V
 
-def detect(image, obj, max_diff=0.1):
+def detect(image, obj, method='absolute', max_diff=0.25):
     """ A naive method to find the position of the template object in the image
     :param image:
     :param obj:
@@ -55,27 +55,30 @@ def detect(image, obj, max_diff=0.1):
         for j in xrange(y):
             im = image[i:i+xo, j:j+yo]
             if im.shape == obj.shape:
-                diff = np.sum(abs(im - obj) / 255.0) / obj.size
-                if diff < max_diff:
-                    answers.append((i,j))
+                if method == 'absolute':
+                    diff = float(np.sum(im != obj)) / obj.size
+                elif method == 'relative':
+                    diff = np.sum(abs(im - obj) / 255.0) / obj.size
+            if diff < max_diff:
+                answers.append((i, j))
     return answers
 
 if __name__ == '__main__':
     player = get_player()
     rng = get_rng()
 
-    task = 'eval'
+    task = 'detect'
 
     import matplotlib.pyplot as plt
     if task == 'save':
-        for i in xrange(25):
-            random_action = rng.choice(range(NUM_ACTIONS))
-            player.action(random_action)
+        for i in xrange(50):
+            #random_action = rng.choice(range(NUM_ACTIONS))
+            player.action(1)
             # Original image: (210 * 160 * 3) by print player.current_state().shape
             # print player.current_state().shape
             #if i == 25:
             #    player.restart_episode()
-            file_name = 'samples/' + ENV_NAME + '_' + str(i)
+            file_name = 'freeway/' + ENV_NAME + '_' + str(i)
             X =  player.current_state()
             np.save(file_name, X)
             imgplot = plt.imshow(X)
@@ -83,9 +86,9 @@ if __name__ == '__main__':
 
     # Experiment on picture 20
     # MANUALLY EXTRACT OBJECTS TEMPLATES
-    if task == 'eval':
-        sample = 20
-        file_name = 'samples/' + ENV_NAME + '_' + str(sample)
+    if task == 'template':
+        sample = '20'
+        file_name = 'freeway/' + ENV_NAME + '_' + str(sample)
         image = np.load(file_name + '.npy')
         #Canny Edge Detection
         # plt.imshow(image)
@@ -98,10 +101,19 @@ if __name__ == '__main__':
         # exit()
 
         #Find the template
-        # Y = image[27:37, 143:151] o1
-        # Y = image[43:53, 139:147] o2
-        Y = image[59:69, 139:147]
-        np.save('samples/o3.npy', Y)
+        # For
+        # Y = image[27:37, 143:151] #o1
+        # Y = image[43:53, 139:147] #o2
+        # Y = image[59:69, 134:142] #o3
+        # Y = image[75:85, 122:130] #o4
+        # Y = image[91:101, 88:96]  #o5
+        # Y = image[107:117, 66:74] #o6
+        # Y = image[123:133, 32:40] #o7
+        # Y = image[139:149, 20:28] #o8
+        # Y = image[155:165, 15:23] #o9
+        # Y = image[171:181, 11:19] #o10
+        # Y = image[125:133,44:50] #o11
+        #np.save('freeway/o11.npy', Y)
         o = Y
         #o = np.load('samples/o1.npy')
         xo,yo = o.shape
@@ -122,3 +134,17 @@ if __name__ == '__main__':
         #plt.imshow(X)
         # print o1
         #plt.show()
+    if task == 'detect':
+        sample = '24'
+        file_name = 'freeway/' + ENV_NAME + '_' + str(sample)
+        image = np.load(file_name + '.npy')
+
+        objs = [str(i) for i in xrange(1, 12)]
+        for id in objs:
+            obj = np.load('freeway/' + 'o' + id + '.npy')
+            indices = detect(image, obj)
+            for index in indices:
+                x, y = index
+                cv2.rectangle(image, (y,x), (y+obj.shape[0], x+obj.shape[1]), (0,255,0), 1)
+        plt.imshow(image)
+        plt.show()
